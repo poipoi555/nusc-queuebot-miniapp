@@ -15,13 +15,16 @@ interface QueueContextType {
   currentPosition: number;
   userPosition: number | null;
   isInQueue: boolean;
-  notifyAt: number;
   joinQueue: (name: string) => void;
   leaveQueue: () => void;
   nextInQueue: () => void;
   setNotificationThreshold: (position: number) => void;
+
   isAdmin: boolean;
   setIsAdmin: (value: boolean) => void;
+  adminList: string[]; 
+  removeFromQueue: (userId: string) => void;
+  sendReminder: (userId: string) => void;
 }
 
 const QueueContext = createContext<QueueContextType | undefined>(undefined);
@@ -40,6 +43,10 @@ export const QueueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [userId, setUserId] = useState<string | null>(null);
   const [notifyAt, setNotifyAt] = useState(3);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [adminList, setAdminList] = useState<string[]>([
+    "username1", 
+    "username2" 
+  ]);
 
   // Initialize user ID on mount
   useEffect(() => {
@@ -53,9 +60,38 @@ export const QueueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
 
     // Check if admin
-    const isAdminStored = localStorage.getItem("queueIsAdmin") === "true";
-    setIsAdmin(isAdminStored);
+    const username = localStorage.getItem("telegramUsername");
+    if (username && adminList.includes(username)) {
+      setIsAdmin(true);
+      localStorage.setItem("queueIsAdmin", "true");
+    }
   }, []);
+
+
+  // Remove user from queue 
+  const removeFromQueue = (userIdToRemove: string) => {
+    if (!isAdmin) {
+      return;
+    }
+    const userToRemove = queue.find(user => user.id === userIdToRemove);
+    if (userToRemove) {
+      setQueue(prevQueue => prevQueue.filter(user => user.id !== userIdToRemove));
+      toast.success(`Removed ${userToRemove.name} from queue.`);
+    }
+  };
+
+  // Send reminder to a specific user (admin function)
+  const sendReminder = (userIdToNotify: string) => {
+    if (!isAdmin) {
+      return;
+    }
+    const userToNotify = queue.find(user => user.id === userIdToNotify);
+    if (userToNotify) {
+      // 
+      toast.success(`Sent a reminder to ${userToNotify.name}.`);
+    }
+  };
+
 
   // Calculate if user is in queue and their position
   const userPosition = userId ? queue.find(user => user.id === userId)?.position ?? null : null;
@@ -95,7 +131,7 @@ export const QueueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       name,
       position: newPosition,
       joinedAt: new Date(),
-      isActive: true
+      isActive: true,
     };
 
     setQueue([...queue, newUser]);
@@ -129,6 +165,15 @@ export const QueueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const setNotificationThreshold = (position: number) => {
     setNotifyAt(position);
     toast.info(`You'll be notified when your position is ${position} or less`);
+
+    if (userId) {
+      setQueue(prevQueue => prevQueue.map(user =>
+          user.id === userId
+            ? { ...user, notifyAt: position } 
+            : user
+        )
+      );
+    }
   };
 
   const value = {
@@ -145,8 +190,13 @@ export const QueueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setIsAdmin: (value: boolean) => {
       setIsAdmin(value);
       localStorage.setItem("queueIsAdmin", value.toString());
-    }
+    },
+    adminList,
+    removeFromQueue,
+    sendReminder
   };
 
   return <QueueContext.Provider value={value}>{children}</QueueContext.Provider>;
 };
+export { useState };
+

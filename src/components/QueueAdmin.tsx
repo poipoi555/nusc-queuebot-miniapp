@@ -15,12 +15,12 @@ import { Switch } from "../components/ui/switch";
 import { Label } from "../components/ui/label";
 
 export const QueueAdmin: React.FC = () => {
-  const { nextInQueue, currentPosition, isAdmin, setIsAdmin } = useQueue();
+  const { nextInQueue, currentPosition, isAdmin, setIsAdmin, removeFromQueue, sendReminder, queue } = useQueue();
 
   const handleNextInQueue = () => {
     nextInQueue();
   };
-
+  
   return (
     <Card className={`glass-card ${isAdmin ? "border-primary/50" : ""}`}>
       <CardHeader className="space-y-1">
@@ -65,7 +65,48 @@ export const QueueAdmin: React.FC = () => {
             <ChevronRight className="ml-2 h-4 w-4" />
           </Button>
         </CardFooter>
-      )}
+      )} <br></br>
+      <CardContent>
+        {isAdmin && (
+          <div className="text-center">
+            <div className="text-muted-foreground">Users to remind</div> <br></br>
+            {queue.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No users to notify right now.</p>
+            ) : (
+              <div className="space-y-2">
+                {queue.map((user) => (
+                  <div
+                    key={user.id}
+                    className="flex justify-between items-center p-2 border border-border rounded-md"
+                  >
+                    <div>
+                      <span className="font-medium">{user.name}</span>
+                      <span className="ml-2 text-xs text-muted-foreground">
+                        #{user.position}
+                      </span>
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => sendReminder(user.id)}
+                    >
+                      Remind
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => removeFromQueue(user.id)}
+                    >
+                      Remove
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        
+        )}
+      </CardContent>
     </Card>
   );
 };
